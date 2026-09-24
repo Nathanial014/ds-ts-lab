@@ -1,0 +1,152 @@
+// ---------------------------------------------------------------
+// 2. FUNCTIONS
+// ---------------------------------------------------------------
+
+import type { ComboDeal, MenuItem, OrderLine } from "./menuTypes";
+
+const soup: MenuItem = {
+  id: 1,
+  name: "Roast Tomato Soup",
+  course: "starter",
+  price: 5.5,
+  nutrition: {
+    calories: 180,
+    allergens: ["celery"],
+  },
+  discountPercent: 10,
+};
+
+const risotto: MenuItem = {
+  id: 2,
+  name: "Mushroom Risotto",
+  course: "main",
+  price: 14.0,
+  nutrition: {
+    calories: 620,
+    allergens: ["milk"],
+  },
+};
+
+const brownie: MenuItem = {
+  id: 3,
+  name: "Chocolate Brownie",
+  course: "dessert",
+  price: 6.0,
+  nutrition: {
+    calories: 450,
+    allergens: ["milk", "eggs", "gluten"],
+  },
+  availableFrom: new Date("2026-12-01"),
+};
+
+const menu: MenuItem[] = [soup, risotto, brownie];
+
+const lunchCombo: ComboDeal = {
+  id: 101,
+  name: "Soup & Sweet",
+  items: [soup, brownie],
+  price: 10.0,
+};
+
+const currentOrder: OrderLine[] = [risotto, lunchCombo, soup];
+
+// TS: Give every function below an explicit parameter type. Add an explicit
+//     return type only where it documents something non-obvious - elsewhere
+//     rely on *type inference* (check the inferred signature with VS Code's
+//     intellisense before you decide).
+
+function describe(item: MenuItem) {
+  return `${item.name} (${item.course}) - EUR ${item.price.toFixed(2)}`;
+}
+
+// TS: An OrderLine is a union, so this function must *narrow* the type before
+//     it can touch the properties that only one member has. Use the 'in'
+//     operator - a ComboDeal has an 'items' property, a MenuItem does not.
+function lineTotal(line: OrderLine) {
+  if ("items" in line) {
+    return line.price; // Combos are sold at their bundle price.
+  }
+  return line.price;
+}
+
+function orderTotal(lines: OrderLine[]) {
+  return lines.reduce((total, line) => total + lineTotal(line), 0);
+}
+
+// TS: 'predicate' is a callback - a *higher order function* parameter. Type it
+//     as a function signature: (item: MenuItem) => boolean.
+function filterMenu(items: MenuItem[], predicate: (item: MenuItem) => boolean) {
+  return items.filter(predicate);
+}
+
+// TS: 'max' should be an *optional parameter*: when omitted, return every
+//     match. Beware - the compiler will complain about comparing a possibly
+//     'undefined' value with a number, so handle that case explicitly.
+function cheapest(items: MenuItem[], max?: number) {
+  const sorted = [...items].sort((a, b) => a.price - b.price);
+  if (max === undefined) {
+    return sorted;
+  }
+  return sorted.slice(0, max);
+}
+
+// TS: This function works on any array, not just menu items. Make it
+//     *generic*: <T>(data: T[], criteria: (d: T) => boolean) => T | undefined.
+function firstMatch<T>(data: T[], criteria: (d: T) => boolean): T | undefined {
+  return data.find(criteria);
+}
+
+// TS: 'changes' holds *some* of a MenuItem's properties. Use the Partial<>
+//     *utility type* rather than declaring a new interface by hand.
+export type ItemChanges = Partial<MenuItem>;
+
+function updateItem(item: MenuItem, changes: ItemChanges) {
+  return { ...item, ...changes };
+}
+
+// TS: The kitchen ticket needs the name and course of an item, and nothing
+//     else - and it must not be modifiable once created. Declare its type by
+//     composing two utility types: Readonly<Pick<...>>.
+function kitchenTicket(item: MenuItem ): Readonly<Pick<MenuItem, "name" | "course">> {
+  return {
+    name: item.name,
+    course: item.course,
+  };
+}
+
+// TS: An allergy card is a MenuItem without its nutrition property, but with a
+//     'warning' string added. Declare its type with Omit<> and an intersection
+//     (&) - see the EventPass example in the Utility Types section.
+function allergyCard(item: MenuItem): Omit<MenuItem, "nutrition"> & { warning: string } {
+  return {
+    id: item.id,
+    name: item.name,
+    course: item.course,
+    price: item.price,
+    warning: `Contains: ${item.nutrition.allergens.join(", ")}`,
+  };
+}
+
+// ---------------------------------------------------------------
+// 3. TESTS - these should still produce the same output afterwards.
+// ---------------------------------------------------------------
+
+console.log(describe(risotto));
+console.log(orderTotal(currentOrder));
+console.log(filterMenu(menu, (i) => i.nutrition.calories < 500));
+console.log(cheapest(menu, 2));
+console.log(cheapest(menu));
+console.log(firstMatch(menu, (i) => i.course === "dessert"));
+console.log(updateItem(soup, { price: 6.0, discountPercent: 10 }));
+console.log(kitchenTicket(brownie));
+console.log(allergyCard(brownie));
+
+// TS: The compiler will reject the next line once kitchenTicket returns a
+//     Readonly<> type. Leave it commented out with a note explaining why.
+// kitchenTicket(brownie).name = "Something else";
+
+// TS: Three more lines below are bugs that only the compiler can see. Once
+//     your types are in place, fix each one and note it in your commit message.
+// console.log(describe(lunchCombo)); REASON: 'lunchCombo' is likely of type ComboDeal, not MenuItem, so 'describe' may not accept it.
+// console.log(updateItem(soup, { price: "7.00" })); REASON: 'price' should be a number, not a string.
+// console.log(firstMatch(menu, (i) => i.calories < 300)); REASON: 'calories' is nested under 'nutrition', so the correct check would be 'i.nutrition.calories < 300'.
