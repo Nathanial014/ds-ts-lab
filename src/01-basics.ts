@@ -7,16 +7,18 @@ import {Friend, Colleague, ColleagueHistory } from './myTypes'
 //     age: number
 // }
 
-const friend1 = {
+const friend1: Friend = {
   name: "James Cameron",
   phone: "087-12345",
   age: 25,
+  dob: new Date("1998-4-20") ,
 };
 
-const friend2 = {
+const friend2: Friend = {
   name: "Paul Walsh",
   phone: "086--12345",
   age: 31,
+  interests: ["reading", "sports"]
 };
 
 export const friends = [friend1, friend2];
